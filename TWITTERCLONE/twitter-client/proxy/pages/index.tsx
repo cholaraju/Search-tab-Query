@@ -1,103 +1,107 @@
 import Image from "next/image";
-import localFont from "next/font/local";
-import { BsBell, BsBookmark, BsEnvelope, BsTwitter } from "react-icons/bs";
-import { BiHomeCircle, BiHash, BiUser, BiMoney } from "react-icons/bi";
-import { Inter } from "next/font/google";
+import { useState } from "react";
+// import localFont from "next/font/local";
+
+// import { Inter } from "next/font/google";
 import FeedCard from "@/components/FeedCard/index";
-import { SlOptions } from "react-icons/sl";
-
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
-
-interface TwitterSidebarButton {
-  title: string;
-  icon: React.ReactNode;
+import { useCallback } from "react";
+// import { graphql } from "@/gql";
+import { useCurrentUser } from "@/hooks/user";
+import { useCreateTweet, useGetAllTweets } from "@/hooks/tweet";
+import { Tweet } from "@/gql/graphql";
+import Twitterlayout from "@/components/FeedCard/Layout/TwitterLayout";
+import { BiImageAlt } from "react-icons/bi";
+import { GetServerSideProps } from "next";
+import { graphql } from "@/gql";
+import { graphqlClient } from "@/clients/api";
+import { getAllTweetsQuery } from "@/graphql/query/tweet";
+//
+// const geistSans = localFont(
+// src: "./fonts/GeistVF.woff",
+// variable: "--font-geist-sans",
+// weight: "100 900",
+// });
+// const geistMono = localFont({
+// src: "./fonts/GeistMonoVF.woff",
+// variable: "--font-geist-mono",
+// weight: "100 900",
+// });
+interface HomeProps {
+  tweets?: Tweet[]
 }
-const sidebarMenuItems: TwitterSidebarButton[] = [
-  {
-    title: "Home",
-    icon: <BiHomeCircle />,
-  },
-  {
-    title: "Explore",
-    icon: <BiHash />,
-  },
-  {
-    title: "Notifications",
-    icon: <BsBell />,
-  },
-  {
-    title: "Messages",
-    icon: <BsEnvelope />,
-  },
-  {
-    title: "Bookmarks",
-    icon: <BsBookmark />,
-  },
-  {
-    title: "TwitterBlue",
-    icon: <BiMoney />,
-  },
-  {
-    title: "profile",
-    icon: <BiUser />,
-  },
-  {
-    title: "More Options",
-    icon: <SlOptions />,
-  },
-];
 
-export default function Home() {
+
+export default function Home(props: HomeProps ) {
+  const { user } = useCurrentUser();
+  const { mutate } = useCreateTweet();
+
+  const [content, setContent] = useState("");
+
+  // console.log(user);
+  const handleSelectImage = useCallback(() => {
+    const input = document.createElement("input");
+    input.setAttribute("type", "file");
+    input.setAttribute("accept", "image/*");
+    input.click();
+  }, []);
+  const handleCreateTweet = useCallback(() => {
+    mutate({
+      content,
+    });
+  }, [content, mutate]);
+
   return (
     <div>
-      <div className="grid grid-cols-12 h-screen w-screen  px-56 ">
-        <div className="col-span-3 pt-1 px-4  mr-36">
-          <div className="text-2xl h-fit hover:bg-gray-800 rounded-full p-2 transition-all cursor-pointer w-fit ">
-            <BsTwitter />
+      <Twitterlayout>
+        <div>
+          <div className="border border-r-0 border-l-0 border-b-0 border-gray-600 p-5 hover:bg-slate-900 transition-all cursor-pointer ">
+            {" "}
           </div>
-          <div className="mt-1 text-xl font-semibold pr-4">
-            <ul>
-              {sidebarMenuItems.map((item) => (
-                <li
-                  className="flex justify-start items-start gap-4 hover:bg-gray-800 rounded-full px-3 py-3 w-fit cursor-pointer mt-2"
-                  key={item.title}
+          <div className="grid grid-cols-12 gap-3 ">
+            <div className="col-span-1">
+              {user?.profileImageURL && (
+                <Image
+                  className="rounded-full"
+                  src={user?.profileImageURL}
+                  alt="user-image"
+                  height={50}
+                  width={50}
+                />
+              )}
+            </div>
+            <div className="col-span-11 ">
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className=" w-full bg-transparent text-xl px-3 border-b border-slate-700"
+                placeholder="What's happening?"
+                rows={3}
+              ></textarea>
+              <div className="mt-2 flex justify-between items-center mb-4 mr-2">
+                <BiImageAlt onClick={handleSelectImage} className="text-xl" />
+                <button
+                  onClick={handleCreateTweet}
+                  className="bg-[#1d9bf0] font-semibold text-sm  px-2 py-1 rounded-xl  "
                 >
-                  <span className="text-3xl">{item.icon}</span>
-                  <span>{item.title}</span>{" "}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-5 px-3">
-              <button className="bg-[#1d9bf0] font-semibold text-lg  px-10 py-2 rounded-full w-fit ">
-                Tweet
-              </button>
+                  Tweet
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        <div className="col-span-5 border-r-[1px]  border-l-[1px]  mt-4  h-screen overflow-scroll border-gray-600 ">
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-        </div>
-        <div className="col-span-3"></div>
-      </div>
+        {props.tweets?.map((tweet) =>
+          tweet ? <FeedCard key={tweet?.id} data={tweet as Tweet} /> : null
+        )}
+      </Twitterlayout>
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps<HomeProps>  = async (context) => {
+  const allTweets = await graphqlClient.request(getAllTweetsQuery);
+  return {
+    props: {
+      tweets: allTweets.getAllTweets as Tweet[],
+    },
+  };
+};
